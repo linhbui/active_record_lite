@@ -1,6 +1,7 @@
 require_relative 'db_connection'
 require_relative '01_sql_object'
 
+# Add the ability to search using where
 module Searchable
   def where(params)
     where_line = params.keys.map { |attribute| "#{attribute.to_s} = ?" }

@@ -4,16 +4,37 @@ require 'active_support/inflector'
 # of this project. It was only a warm up.
 
 class SQLObject
+  
+  # Set the name of the table
+  def self.table_name=(table_name)
+    @table_name = table_name
+  end
+  
+  # Get the name of the table from the name of the class
+  def self.table_name
+    @table_name ||= self.name.tableize
+  end
+  
+  # Return an array with the names of table columns
   def self.columns
+    return @columns if @columns
     results = DBConnection.execute2(<<-SQL)
     SELECT
     #{ table_name }.*
     FROM
     #{ table_name }    
     SQL
-    results.first.map(&:to_sym)
+    @columns = results.first.map(&:to_sym)
   end
-
+  
+  # Set the attributes hash
+  def attributes
+    @attributes ||= {}
+  end
+  
+  # Automatically adds getter and setter methods for each columns
+  # Finalize will be called at the end of the subclass definition to
+  # add the getters/setters.
   def self.finalize!
     self.columns.each do |col|
       define_method "#{col}" do
@@ -25,15 +46,19 @@ class SQLObject
       end
     end
   end
-
-  def self.table_name=(table_name)
-    @table_name = table_name.tableize
+  
+  def initialize(params = {})
+    params.each do |attribute, val|
+      attribute = attribute.to_sym
+      if self.class.columns.include?(attribute)
+        self.send("#{ attribute }=", val)
+      else
+        raise "unknown attribute '#{attribute}'"
+      end
+    end
   end
-
-  def self.table_name
-    @table_name ||= self.name.tableize
-  end
-
+  
+  # fetch all the records from the database
   def self.all
     results = DBConnection.execute(<<-SQL)
      SELECT
@@ -41,13 +66,15 @@ class SQLObject
      FROM
      #{ table_name }
      SQL
+  # Note: Calling DBConnection will return an array of raw Hash objects 
+  # where the keys are column names and the values are column values.
+  # Hence, we need to parse the results   
    parse_all(results)
   end
-
+  
+  
   def self.parse_all(results)
-    results.map do |attributes|
-      self.new(attributes)
-    end
+    results.map { |attributes| self.new(attributes) }
   end
 
   def self.find(id)
@@ -60,21 +87,6 @@ class SQLObject
       #{ table_name }.id = ?
     SQL
     parse_all(results).first
-  end
-
-  def initialize(params = {})
-    params.each do |name, val|
-      name = name.to_sym
-      if self.class.columns.include?(name)
-        self.send("#{ name }=", val)
-      else
-        raise "unknown attribute '#{name}'"
-      end
-    end
-  end
-
-  def attributes
-    @attributes ||= {}
   end
 
   def attribute_values
