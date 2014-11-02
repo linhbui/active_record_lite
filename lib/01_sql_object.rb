@@ -72,11 +72,12 @@ class SQLObject
    parse_all(results)
   end
   
-  
+  # Turn the array of hash objects into Ruby objects
   def self.parse_all(results)
     results.map { |attributes| self.new(attributes) }
   end
-
+  
+  # Find an object based on its id
   def self.find(id)
     results = DBConnection.execute(<<-SQL, id)
     SELECT
@@ -88,16 +89,20 @@ class SQLObject
     SQL
     parse_all(results).first
   end
-
+  
+  # Return an array of values for each attribute
   def attribute_values
     self.class.columns.map { |attr| self.send(attr) }
   end
 
+  # Insert a new record to the database
   def insert
-    p cols = self.class.columns
-    p attribute_values
+    # Preparing for the query...
+    cols = self.class.columns
     col_names = cols.map(&:to_s).join(", ")
     question_marks = (["?"] * cols.count).join(", ")
+    
+    # The actual query
     DBConnection.execute(<<-SQL, *attribute_values)
     INSERT INTO
       #{ self.class.table_name } (#{ col_names })
@@ -105,12 +110,18 @@ class SQLObject
       (#{ question_marks })
     SQL
     
+    # Add an id number for the record
     self.id = DBConnection.last_insert_row_id
   end
-
+  
+  # Update a record
   def update
+    # Preparing for the database query
     set_line = self.class.columns
       .map { |attr| "#{ attr } = ?" }.join(", ")
+    
+    
+    # Query  
     DBConnection.execute(<<-SQL, *attribute_values, id)
     UPDATE
       #{ self.class.table_name } 
