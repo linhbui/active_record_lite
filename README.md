@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Active Record Lite!
 
 ==================
@@ -18,4 +17,3 @@ Topics:
 - Database Migration
 - Metaprogramming: define_method
 - send
->>>>>>> 821fb6c4e40fa7e9d0a995883205372c445fd34e
